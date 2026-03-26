@@ -1,5 +1,7 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Icon from "@/components/ui/icon";
+
+const API_URL = "https://functions.poehali.dev/dbb016a9-eed7-4959-aa5a-02a09997216b";
 
 /* ─── Types ─── */
 interface Listing {
@@ -16,57 +18,7 @@ interface Listing {
   features?: string[];
 }
 
-/* ─── Seed data ─── */
-const SEED_LISTINGS: Listing[] = [
-  {
-    id: 1,
-    title: "Офисный блок в бизнес-центре класса B+",
-    category: "Офисы",
-    area: 185,
-    price: 85000,
-    priceType: "month",
-    address: "ул. Ленина, 24, этаж 7",
-    description:
-      "Открытая планировка с переговорной комнатой. Отдельный вход с этажа, парковочные места в подземном паркинге. Свежий ремонт, вся инфраструктура БЦ.",
-    photos: [
-      "https://cdn.poehali.dev/projects/14ab8a9c-f7f7-4f5b-acc4-7ade119a8a4c/files/e26283e0-ffc0-4a27-9427-c92236c173d3.jpg",
-    ],
-    floor: "7 из 14",
-    features: ["Парковка", "Охрана 24/7", "Кондиционирование", "Оптика"],
-  },
-  {
-    id: 2,
-    title: "Отапливаемый склад с рампой",
-    category: "Склады",
-    area: 620,
-    price: 180000,
-    priceType: "month",
-    address: "пр. Промышленный, 8",
-    description:
-      "Высота потолков 8м, ворота 4×4м, рампа для фур. Ж/д ветка в 300м. Офисный блок 40 кв.м. в составе. Возможна аренда от 200 кв.м.",
-    photos: [
-      "https://cdn.poehali.dev/projects/14ab8a9c-f7f7-4f5b-acc4-7ade119a8a4c/files/df668269-89ca-4d02-ae47-ba82350bace8.jpg",
-    ],
-    floor: "1 этаж",
-    features: ["Отопление", "Рампа", "Видеонаблюдение", "Пожарная сигнализация"],
-  },
-  {
-    id: 3,
-    title: "Торговое помещение в ТЦ, 1 линия",
-    category: "Под магазин",
-    area: 95,
-    price: 120000,
-    priceType: "month",
-    address: "ул. Торговая, 12, ТЦ «Меридиан»",
-    description:
-      "Стрит-ретейл, витринное остекление на оживлённый проспект. Пешеходный трафик 8000+ чел/день. Отдельный вход, своя терраса.",
-    photos: [
-      "https://cdn.poehali.dev/projects/14ab8a9c-f7f7-4f5b-acc4-7ade119a8a4c/files/e3bbc6b7-b7d5-4dee-9e90-67ff93534e08.jpg",
-    ],
-    floor: "1 этаж",
-    features: ["Витрина", "Отдельный вход", "Высокий трафик"],
-  },
-];
+
 
 const DEFAULT_CATEGORIES = ["Офисы", "Склады", "Под магазин", "Свободная планировка"];
 
@@ -370,13 +322,21 @@ function AddListingModal({ onClose, onAdd, categories }: { onClose: () => void; 
 
 /* ─── Main Page ─── */
 const Index = () => {
-  const [listings, setListings] = useState<Listing[]>(SEED_LISTINGS);
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState("Все");
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
 
   const agentName = "Иван Петров";
   const phone = "+7 (999) 123-45-67";
+
+  useEffect(() => {
+    fetch(API_URL)
+      .then((r) => r.json())
+      .then((data) => { setListings(data); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
 
   const allCategories = [
     "Все",
@@ -385,8 +345,16 @@ const Index = () => {
 
   const filtered = activeCategory === "Все" ? listings : listings.filter((l) => l.category === activeCategory);
 
-  function handleAdd(l: Listing) {
-    setListings((prev) => [l, ...prev]);
+  async function handleAdd(l: Listing) {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(l),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setListings((prev) => [{ ...l, id: data.id }, ...prev]);
+    }
   }
 
   const listingsRef = useRef<HTMLDivElement>(null);
@@ -507,7 +475,12 @@ const Index = () => {
             ))}
           </div>
 
-          {filtered.length === 0 ? (
+          {loading ? (
+            <div className="text-center py-16 text-muted-foreground">
+              <Icon name="Loader" size={36} className="mx-auto mb-4 opacity-40 animate-spin" />
+              <p className="font-display uppercase tracking-wider text-sm">Загружаем объявления...</p>
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="text-center py-16 text-muted-foreground">
               <Icon name="Building2" size={48} className="mx-auto mb-4 opacity-30" />
               <p className="font-display uppercase tracking-wider">В этом разделе пока нет объявлений</p>

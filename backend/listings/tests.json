@@ -1,0 +1,32 @@
+{
+  "tests": [
+    {
+      "name": "GET listings",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": [{"id": 1}],
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "POST listing",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "title": "Тест офис",
+        "category": "Офисы",
+        "area": 100,
+        "price": 50000,
+        "priceType": "month",
+        "address": "ул. Тестовая, 1",
+        "description": "Тестовое описание офиса",
+        "photos": [],
+        "floor": "2",
+        "features": ["Парковка"]
+      },
+      "expectedStatus": 201,
+      "expectedBody": {"ok": true},
+      "bodyMatcher": "partial"
+    }
+  ]
+}
