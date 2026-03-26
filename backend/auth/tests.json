@@ -1,0 +1,22 @@
+{
+  "tests": [
+    {
+      "name": "Wrong password",
+      "method": "POST",
+      "path": "/",
+      "body": {"password": "wrongpass"},
+      "expectedStatus": 401,
+      "expectedBody": {"ok": false},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Correct password",
+      "method": "POST",
+      "path": "/",
+      "body": {"password": "Realty2024!"},
+      "expectedStatus": 200,
+      "expectedBody": {"ok": true},
+      "bodyMatcher": "partial"
+    }
+  ]
+}
