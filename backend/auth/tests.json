@@ -13,7 +13,7 @@
       "name": "Correct password",
       "method": "POST",
       "path": "/",
-      "body": {"password": "Realty2024!"},
+      "body": {"password": "admin123"},
       "expectedStatus": 200,
       "expectedBody": {"ok": true},
       "bodyMatcher": "partial"

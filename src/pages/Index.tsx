@@ -31,6 +31,72 @@ function adminHeaders(token: string) {
   return { "Content-Type": "application/json", "X-Admin-Token": token };
 }
 
+/* ─── Change Password Modal ─── */
+function ChangePasswordModal({ onClose, adminToken, onChanged }: { onClose: () => void; adminToken: string; onChanged: (newToken: string) => void }) {
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (next !== confirm) { setError("Пароли не совпадают"); return; }
+    if (next.length < 6) { setError("Минимум 6 символов"); return; }
+    setLoading(true); setError("");
+    const res = await fetch(AUTH_URL, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ current, new: next }),
+    });
+    const data = await res.json();
+    setLoading(false);
+    if (data.ok) { setDone(true); onChanged(next); }
+    else setError(data.error || "Ошибка");
+  }
+
+  const inputCls = "w-full border border-border bg-white px-4 py-2.5 text-sm font-body text-foreground placeholder-muted-foreground focus:outline-none focus:border-navy transition-colors";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-fade-in" onClick={onClose}>
+      <div className="bg-white w-full max-w-sm shadow-2xl animate-slide-up" onClick={(e) => e.stopPropagation()}>
+        <div className="bg-navy text-white px-6 py-5 flex items-center justify-between">
+          <h2 className="font-display text-xl uppercase tracking-wider">Смена пароля</h2>
+          <button onClick={onClose} className="opacity-70 hover:opacity-100 transition-opacity"><Icon name="X" size={20} /></button>
+        </div>
+        {done ? (
+          <div className="p-8 text-center">
+            <Icon name="CheckCircle" size={48} className="mx-auto mb-3 text-gold" />
+            <p className="font-display uppercase tracking-wider text-foreground">Пароль успешно изменён</p>
+            <button onClick={onClose} className="mt-5 w-full bg-navy text-white font-display uppercase tracking-wider text-sm py-3 transition-colors hover:bg-navy/90">Закрыть</button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <div>
+              <label className="block text-xs font-display uppercase tracking-wider text-muted-foreground mb-1.5">Текущий пароль</label>
+              <input type="password" required className={inputCls} value={current} onChange={(e) => setCurrent(e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-xs font-display uppercase tracking-wider text-muted-foreground mb-1.5">Новый пароль</label>
+              <input type="password" required className={inputCls} placeholder="Минимум 6 символов" value={next} onChange={(e) => setNext(e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-xs font-display uppercase tracking-wider text-muted-foreground mb-1.5">Повторите новый пароль</label>
+              <input type="password" required className={inputCls} value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+            </div>
+            {error && <p className="text-destructive text-xs">{error}</p>}
+            <button type="submit" disabled={loading} className="w-full bg-navy hover:bg-navy/90 disabled:opacity-50 text-white font-display uppercase tracking-wider text-sm py-3.5 flex items-center justify-center gap-2 transition-colors">
+              {loading ? <Icon name="Loader" size={16} className="animate-spin" /> : <Icon name="KeyRound" size={16} />}
+              Сменить пароль
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ─── Login Modal ─── */
 function LoginModal({ onClose, onLogin }: { onClose: () => void; onLogin: (token: string) => void }) {
   const [password, setPassword] = useState("");
@@ -381,6 +447,7 @@ const Index = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editListing, setEditListing] = useState<Listing | null>(null);
   const [showLogin, setShowLogin] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
   const [adminToken, setAdminToken] = useState<string>(() => localStorage.getItem(ADMIN_TOKEN_KEY) || "");
 
   const isAdmin = !!adminToken;
@@ -469,6 +536,9 @@ const Index = () => {
                 <>
                   <button onClick={() => setShowAddModal(true)} className="bg-gold hover:bg-gold/90 text-white font-display uppercase tracking-wider text-xs px-4 py-2 flex items-center gap-1.5 transition-colors">
                     <Icon name="Plus" size={14} /><span className="hidden sm:inline">Добавить</span>
+                  </button>
+                  <button onClick={() => setShowChangePassword(true)} title="Сменить пароль" className="bg-white/10 hover:bg-white/20 text-white w-9 h-9 flex items-center justify-center transition-colors flex-shrink-0">
+                    <Icon name="KeyRound" size={15} />
                   </button>
                   <button onClick={handleLogout} title="Выйти из админки" className="bg-white/10 hover:bg-white/20 text-white w-9 h-9 flex items-center justify-center transition-colors flex-shrink-0">
                     <Icon name="LogOut" size={15} />
@@ -629,6 +699,7 @@ const Index = () => {
       {showAddModal && <ListingFormModal onClose={() => setShowAddModal(false)} onSave={handleSave} categories={allCategories.filter((c) => c !== "Все")} adminToken={adminToken} />}
       {editListing && <ListingFormModal onClose={() => setEditListing(null)} onSave={handleSave} categories={allCategories.filter((c) => c !== "Все")} initial={editListing} adminToken={adminToken} />}
       {showLogin && <LoginModal onClose={() => setShowLogin(false)} onLogin={handleLogin} />}
+      {showChangePassword && <ChangePasswordModal onClose={() => setShowChangePassword(false)} adminToken={adminToken} onChanged={(t) => { setAdminToken(t); localStorage.setItem(ADMIN_TOKEN_KEY, t); }} />}
 
       {/* Mobile FAB */}
       <a href={`tel:${phone}`} className="fixed bottom-5 right-5 z-30 md:hidden bg-gold hover:bg-gold/90 text-white w-14 h-14 flex items-center justify-center shadow-lg transition-colors rounded-full">
